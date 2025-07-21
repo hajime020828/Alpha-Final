@@ -1,4 +1,4 @@
-// hajime020828/alpha-dash/Alpha-Dash-b6fd7c5979d65989544aef359f6320faa7a64a6e/pages/projects/[projectID].tsx
+// hajime020828/alpha-final/Alpha-Final-4cbe9bf4da536211eff750877a9a976d273d2b03/pages/projects/[projectID].tsx
 import { useRouter } from 'next/router';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import type { StockRecord, ProjectWithProgress, ProjectDetailApiResponse } from '@/lib/db';
@@ -15,7 +15,6 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
-import { JAPAN_HOLIDAYS_AND_EXCHANGE_CLOSURES_2025 } from '@/lib/dateUtils';
 
 ChartJS.register(
   CategoryScale,
@@ -73,7 +72,6 @@ const ProjectDetailPage = () => {
   const [fixedVolumeScenarios, setFixedVolumeScenarios] = useState<FixedVolumeScenario[]>([]);
   const simulatedDateLabel = "シミュレーション";
 
-  const [isRemainingDaysVisible, setIsRemainingDaysVisible] = useState<boolean>(false);
   const [isHistoryVisible, setIsHistoryVisible] = useState<boolean>(true);
 
   useEffect(() => {
@@ -360,38 +358,6 @@ const ProjectDetailPage = () => {
     },
     interaction: { mode: 'index' as const, axis: 'x' as const, intersect: false }
   };
-  
-  const remainingBusinessDaysList = useMemo(() => {
-    if (!data?.project) return [];
-
-    const { Start_Date, End_Date } = data.project;
-    const stockRecords = data.stockRecords || [];
-
-    const lastTradeDate = stockRecords.length > 0
-        ? new Date(stockRecords[stockRecords.length - 1].Date)
-        : new Date(Start_Date);
-        
-    const tomorrow = new Date(lastTradeDate);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const endDate = new Date(End_Date);
-    const daysList: string[] = [];
-    let currentDate = tomorrow;
-
-    while (currentDate <= endDate) {
-        const dayOfWeek = currentDate.getDay();
-        const yyyy = currentDate.getFullYear();
-        const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(currentDate.getDate()).padStart(2, '0');
-        const formattedDate = `${yyyy}-${mm}-${dd}`;
-
-        if (dayOfWeek !== 0 && dayOfWeek !== 6 && !JAPAN_HOLIDAYS_AND_EXCHANGE_CLOSURES_2025.has(formattedDate)) {
-            daysList.push(formattedDate);
-        }
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    return daysList;
-  }, [data?.project, data?.stockRecords]);
 
 
   if (loading && !data) return <p className="text-center text-gray-500">プロジェクト詳細を読み込み中...</p>;
@@ -435,7 +401,7 @@ const ProjectDetailPage = () => {
         <div className="text-right"><p className="text-sm text-gray-600">TS担当者:</p><p className="text-lg font-semibold text-gray-700">{project.TS_Contact || 'N/A'}</p></div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <div className="bg-white shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-700">基本情報</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 text-base">
@@ -456,14 +422,10 @@ const ProjectDetailPage = () => {
         </div>
         <div className="bg-white shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-700">プロジェクトサマリー (前営業日時点)</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-8 text-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 text-base">
               
-              <div>
-                  <p className="text-sm text-gray-500">約定進捗率</p>
-                  <p className="text-3xl font-bold text-teal-600">
-                      {formatNumber(project.executionProgress, 1)}<span className="text-xl">%</span>
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
+              <p><strong className="font-semibold text-gray-600">約定進捗率:</strong> {formatNumber(project.executionProgress, 1)}%
+                  <span className="text-xs text-gray-500 ml-2">
                       {
                           (project.Total_Shares !== null && project.Total_Shares > 0) ? 
                           `(${formatNumber(project.totalFilledQty,0)} / ${formatNumber(project.Total_Shares,0)} 株)` :
@@ -471,86 +433,63 @@ const ProjectDetailPage = () => {
                           `(${formatCurrency(project.totalFilledAmount)} / ${formatCurrency(project.Total_Amount)})` :
                           'N/A'
                       }
-                  </p>
-              </div>
+                  </span>
+              </p>
 
-              <div>
-                  <p className="text-sm text-gray-500">日数進捗率</p>
-                  <p className="text-3xl font-bold text-sky-600">
-                      {formatNumber(project.daysProgress, 1)}<span className="text-xl">%</span>
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
+              <p><strong className="font-semibold text-gray-600">日数進捗率:</strong> {formatNumber(project.daysProgress, 1)}%
+                  <span className="text-xs text-gray-500 ml-2">
                       (取引 {project.tradedDaysCount || 0}日 / 全 {project.Business_Days || 'N/A'}営業日)
-                  </p>
-              </div>
+                  </span>
+              </p>
 
-              <div>
-                  <p className="text-sm text-gray-500">残存株数 (目安)</p>
-                  <p className="text-3xl font-bold text-blue-600">
+              <p><strong className="font-semibold text-gray-600">残存株数 (目安):</strong> 
                       {sharesCalcStatusMessage 
                           ? <span className="text-lg text-gray-600">{sharesCalcStatusMessage}</span>
                           : formatNumber(effectiveRemainingTargetShares, 0)
                       }
-                      <span className="text-xl ml-1">株</span>
-                  </p>
+                      <span className="ml-1">株</span>
                   {remainingAmount !== null && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <span className="text-xs text-gray-500 ml-2">
                           (残金額: {formatCurrency(remainingAmount)})
-                      </p>
+                      </span>
                   )}
-              </div>
+              </p>
               
-              <div>
-                  <p className="text-sm text-gray-500">残存営業日数</p>
-                  <p className="text-3xl font-bold text-orange-600">
+              <p><strong className="font-semibold text-gray-600">残存営業日数:</strong> 
                       {remainingBusinessDays !== null ? `${remainingBusinessDays}` : 'N/A'}
-                      <span className="text-xl ml-1">日</span>
-                  </p>
-              </div>
+                      <span className="ml-1">日</span>
+              </p>
 
-              <div>
-                  <p className="text-sm text-gray-500">ベンチマーク VWAP</p>
-                  <p className="text-3xl font-bold text-indigo-600">{formatNumber(project.benchmarkVWAP)}</p>
-              </div>
+              <p><strong className="font-semibold text-gray-600">ベンチマーク VWAP:</strong> {formatNumber(project.benchmarkVWAP)}</p>
 
-              <div>
-                  <p className="text-sm text-gray-500">平均約定単価</p>
-                  <p className="text-3xl font-bold text-teal-600">{formatNumber(project.averageExecutionPrice)}</p>
-              </div>
+              <p><strong className="font-semibold text-gray-600">平均約定単価:</strong> {formatNumber(project.averageExecutionPrice)}</p>
 
-              <div>
-                  <p className="text-sm text-gray-500">平均約定株数/日</p>
-                  <p className="text-3xl font-bold text-amber-600">
+              <p><strong className="font-semibold text-gray-600">平均約定株数/日:</strong> 
                       {formatNumber(project.averageDailyShares, 0)}
-                      <span className="text-xl ml-1">株</span>
-                  </p>
-              </div>
+                      <span className="ml-1">株</span>
+              </p>
               {finalMetrics && (
                 <>
-                  <div>
-                    <p className="text-sm text-gray-500">P/L (評価損益)</p>
-                    <p className={`text-3xl font-bold ${finalMetrics.pl !== null && finalMetrics.pl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p><strong className="font-semibold text-gray-600">P/L (評価損益):</strong> 
+                    <span className={`${finalMetrics.pl !== null && finalMetrics.pl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatCurrency(finalMetrics.pl, '-')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">P/L (bps)</p>
-                    <p className={`text-3xl font-bold ${finalMetrics.plBps !== null && finalMetrics.plBps >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    </span>
+                  </p>
+                  <p><strong className="font-semibold text-gray-600">P/L (bps):</strong> 
+                    <span className={`${finalMetrics.plBps !== null && finalMetrics.plBps >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatNumber(finalMetrics.plBps, 2, '-')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">成功報酬額</p>
-                    <p className={`text-3xl font-bold ${finalMetrics.performanceFee !== null && finalMetrics.performanceFee > 0 ? 'text-green-600' : 'text-gray-800'}`}>
+                    </span>
+                  </p>
+                  <p><strong className="font-semibold text-gray-600">成功報酬額:</strong> 
+                    <span className={`${finalMetrics.performanceFee !== null && finalMetrics.performanceFee > 0 ? 'text-green-600' : 'text-gray-800'}`}>
                       {formatCurrency(finalMetrics.performanceFee, formatCurrency(0))}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">固定手数料</p>
-                    <p className="text-3xl font-bold text-gray-800">
+                    </span>
+                  </p>
+                  <p><strong className="font-semibold text-gray-600">固定手数料:</strong> 
+                    <span>
                       {formatCurrency(finalMetrics.fixedFee, formatCurrency(0))}
-                    </p>
-                  </div>
+                    </span>
+                  </p>
                 </>
               )}
           </div>
@@ -648,26 +587,6 @@ const ProjectDetailPage = () => {
                 </div>
             </div>
           ) : <div />}
-      </div>
-
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-700">残日数詳細</h2>
-        <button onClick={() => setIsRemainingDaysVisible(!isRemainingDaysVisible)} className="text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none mb-2">
-            {isRemainingDaysVisible ? '隠す' : '表示する'} {isRemainingDaysVisible ? '▲' : '▼'}
-        </button>
-        {isRemainingDaysVisible && (
-            <div className="p-3 border rounded-md bg-gray-50 text-xs max-h-48 overflow-y-auto">
-                {remainingBusinessDaysList.length > 0 ? (
-                    <ul className="space-y-1">
-                        {remainingBusinessDaysList.map((date, index) => (
-                            <li key={date}>あと{index + 1}営業日: {date}</li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-gray-500">残りの営業日はありません。</p>
-                )}
-            </div>
-        )}
       </div>
 
       {displayStockRecords && displayStockRecords.length > 0 ? (
